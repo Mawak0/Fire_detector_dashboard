@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 def load_model(model_name):
     if model_name == "CatBoost":
         from_file = CatBoostClassifier()
-        return from_file.load_model("../models/cat_boost.cbm")
+        return from_file.load_model("models/cat_boost.cbm")
     with open(model_name, "rb") as f:
         return pickle.load(f)
 
@@ -62,7 +62,7 @@ elif menu == "О датасете":
 
 
 elif menu == "Визуализации":
-    df = load_data("../data/smoke_detector_task_preprocessed.csv")
+    df = load_data("data/smoke_detector_task_preprocessed.csv")
     st.title("Анализ данных")
 
     st.subheader("1. Распределение температуры")
@@ -97,20 +97,20 @@ elif menu == "Предсказание":
 
     if mode == "Ручной ввод":
         st.subheader("Выберите модель для предсказания")
-        model = load_model("../models/knn_model.pkl")
+        model = load_model("models/knn_model.pkl")
         model_name = st.selectbox("Модель:", ["KNN", "Gradient Boosting", "CatBoost", "Bagging", "Stacking"])
         @st.cache_resource
         def load_selected_model(name):
             if name == "KNN":
-                model = load_model("../models/knn_model.pkl")
+                model = load_model("models/knn_model.pkl")
             elif name == "Gradient Boosting":
-                model = load_model("../models/GradientBoostingClassifier_model.pkl")
+                model = load_model("models/GradientBoostingClassifier_model.pkl")
             elif name == "CatBoost":
                 model = load_model("CatBoost")
             elif name == "Bagging":
-                model = load_model("../models/BaggingClassifier_model.pkl")
+                model = load_model("models/BaggingClassifier_model.pkl")
             elif name == "Stacking":
-                model = load_model("../models/StackingClassifier_model.pkl")
+                model = load_model("models/StackingClassifier_model.pkl")
 
         selected_model = load_selected_model(model_name)
         st.subheader("Введите данные")
