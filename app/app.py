@@ -91,61 +91,71 @@ elif menu == "Предсказание":
 
     mode = st.radio("Выберите режим:", ["Ручной ввод", "Загрузка CSV"])
 
-    feature_names = ['Temperature[C]', 'Humidity[%]', 'TVOC[ppb]', 'eCO2[ppm]',
-                     'Raw H2', 'Raw Ethanol', 'Pressure[hPa]', 'PM1.0', 'PM2.5',
-                     'NC0.5', 'NC1.0', 'NC2.5', 'CNT']
+    # Список всех доступных моделей
+    all_models = ["KNN", "Gradient Boosting", "CatBoost", "Bagging", "Stacking", "MLPClassifier"]
+    # Теперь — мультиселект
+    selected_models = st.multiselect("Модели:", all_models)
 
+    # Функция для загрузки одной модели по её названию
+    @st.cache_resource
+    def load_selected_model(name):
+        if name == "KNN":
+            return load_model("models/knn_model.pkl")
+        elif name == "Gradient Boosting":
+            return load_model("models/GradientBoostingClassifier_model.pkl")
+        elif name == "CatBoost":
+            return load_model("CatBoost")
+        elif name == "Bagging":
+            return load_model("models/BaggingClassifier_model.pkl")
+        elif name == "Stacking":
+            return load_model("models/StackingClassifier_model.pkl")
+        elif name == "MLPClassifier":
+            return load_model("models/MLP_classifier.pkl")
+        else:
+            return None  # на случай передачи неизвестного имени
+
+    # Загружаем выбранные модели в словарь
+    models_dict = {}
+    for name in selected_models:
+        model_obj = load_selected_model(name)
+        if model_obj is not None:
+            models_dict[name] = model_obj
+
+    # Режим «Ручной ввод»
     if mode == "Ручной ввод":
-        st.subheader("Выберите модель для предсказания")
-        model = load_model("models/knn_model.pkl")
-        model_name = st.multiselect("Модели:", ["KNN", "Gradient Boosting", "CatBoost", "Bagging", "Stacking", "MLPClassifier"])
-        @st.cache_resource
-        def load_selected_model(name):
-            if name == "KNN":
-                model = load_model("models/knn_model.pkl")
-            elif name == "Gradient Boosting":
-                model = load_model("models/GradientBoostingClassifier_model.pkl")
-            elif name == "CatBoost":
-                model = load_model("CatBoost")
-            elif name == "Bagging":
-                model = load_model("models/BaggingClassifier_model.pkl")
-            elif name == "Stacking":
-                model = load_model("models/StackingClassifier_model.pkl")
-            elif name == "MLPClassifier":
-                model = load_model("models/MLP_classifier.pkl")
-
-        selected_models = load_selected_model(model_name)
         st.subheader("Введите данные")
+
+        # Поля ввода для каждого признака
         values = {}
         values['Temperature[C]'] = st.number_input("Температура (°C)")
-        values['Humidity[%]'] = st.number_input("Влажность (%)")
-        values['TVOC[ppb]'] = st.number_input("TVOC (ppb)")
-        values['eCO2[ppm]'] = st.number_input("eCO2 (ppm)")
-        values['Raw H2'] = st.number_input("Raw H2")
-        values['Raw Ethanol'] = st.number_input("Raw Ethanol")
-        values['Pressure[hPa]'] = st.number_input("Давление (hPa)")
-        values['PM1.0'] = st.number_input("PM1.0")
-        values['PM2.5'] = st.number_input("PM2.5")
-        values['NC0.5'] = st.number_input("NC0.5")
-        values['NC1.0'] = st.number_input("NC1.0")
-        values['NC2.5'] = st.number_input("NC2.5")
-        values['CNT'] = st.number_input("CNT")
-        values['Day'] = st.number_input("Day", format="%d", step=1, min_value=1, max_value=31)
-        values['Hour'] = st.number_input("Hour", format="%d", step=1, min_value=0, max_value=23)
+        values['Humidity[%]']    = st.number_input("Влажность (%)")
+        values['TVOC[ppb]']      = st.number_input("TVOC (ppb)")
+        values['eCO2[ppm]']      = st.number_input("eCO₂ (ppm)")
+        values['Raw H2']         = st.number_input("Raw H2")
+        values['Raw Ethanol']    = st.number_input("Raw Ethanol")
+        values['Pressure[hPa]']  = st.number_input("Давление (hPa)")
+        values['PM1.0']          = st.number_input("PM1.0")
+        values['PM2.5']          = st.number_input("PM2.5")
+        values['NC0.5']          = st.number_input("NC0.5")
+        values['NC1.0']          = st.number_input("NC1.0")
+        values['NC2.5']          = st.number_input("NC2.5")
+        values['CNT']            = st.number_input("CNT")
+        values['Day']            = st.number_input("Day", format="%d", step=1, min_value=1, max_value=31)
+        values['Hour']           = st.number_input("Hour", format="%d", step=1, min_value=0, max_value=23)
 
+        # Собираем в DataFrame
         input_df = pd.DataFrame([values])
-        print(input_df.head())
-        
-        for name in selected_models:
-        models_dict[name] = load_model_from_name(name)
-        
+
         if selected_models:
             st.subheader("Результаты предсказания")
             for name, model in models_dict.items():
                 pred = model.predict(input_df)[0]
                 result_text = "🔥 Пожарная тревога!" if pred == 1 else "✅ Всё спокойно."
                 st.write(f"**{name}**: {result_text}")
+        else:
+            st.warning("Пожалуйста, выберите хотя бы одну модель для предсказания.")
 
+    # Режим «Загрузка CSV»
     else:
         st.subheader("Загрузите CSV-файл")
         uploaded_file = st.file_uploader("Файл должен содержать все необходимые признаки", type=["csv"])
@@ -153,13 +163,14 @@ elif menu == "Предсказание":
             try:
                 test_df = pd.read_csv(uploaded_file)
                 if selected_models:
-                    st.subheader("Результаты предсказения")
+                    st.subheader("Результаты предсказания")
                     for name, model in models_dict.items():
                         preds = model.predict(test_df)
                         test_df[f"Prediction_{name.replace(' ', '_')}"] = preds
                     st.write(test_df.head())
                     st.success("Предсказование выполнено успешно!")
                 else:
-                    st.warning("Пожалуйста, выберите хотя бы одну модель.")
+                    st.warning("Пожалуйста, выберите хотя бы одну модель для предсказания.")
             except Exception as e:
                 st.error(f"Ошибка при обработке файла: {e}")
+
