@@ -98,7 +98,7 @@ elif menu == "Предсказание":
     if mode == "Ручной ввод":
         st.subheader("Выберите модель для предсказания")
         model = load_model("models/knn_model.pkl")
-        model_name = st.selectbox("Модель:", ["KNN", "Gradient Boosting", "CatBoost", "Bagging", "Stacking"])
+        model_name = st.multiselect("Модели:", ["KNN", "Gradient Boosting", "CatBoost", "Bagging", "Stacking", "MLPClassifier"])
         @st.cache_resource
         def load_selected_model(name):
             if name == "KNN":
@@ -111,8 +111,10 @@ elif menu == "Предсказание":
                 model = load_model("models/BaggingClassifier_model.pkl")
             elif name == "Stacking":
                 model = load_model("models/StackingClassifier_model.pkl")
+            elif name == "MLPClassifier":
+                model = load_model("models/MLP_classifier.pkl")
 
-        selected_model = load_selected_model(model_name)
+        selected_models = load_selected_model(model_name)
         st.subheader("Введите данные")
         values = {}
         values['Temperature[C]'] = st.number_input("Температура (°C)")
@@ -133,8 +135,16 @@ elif menu == "Предсказание":
 
         input_df = pd.DataFrame([values])
         print(input_df.head())
-        prediction = model.predict(input_df)[0]
-        st.success("🔥 Пожарная тревога!" if prediction == 1 else "✅ Всё спокойно.")
+        
+        for name in selected_models:
+        models_dict[name] = load_model_from_name(name)
+        
+        if selected_models:
+            st.subheader("Результаты предсказания")
+            for name, model in models_dict.items():
+                pred = model.predict(input_df)[0]
+                result_text = "🔥 Пожарная тревога!" if pred == 1 else "✅ Всё спокойно."
+                st.write(f"**{name}**: {result_text}")
 
     else:
         st.subheader("Загрузите CSV-файл")
@@ -142,9 +152,14 @@ elif menu == "Предсказание":
         if uploaded_file:
             try:
                 test_df = pd.read_csv(uploaded_file)
-                preds = model.predict(test_df)
-                test_df["Prediction"] = preds
-                st.write(test_df.head())
-                st.success("Предсказание выполнено успешно!")
+                if selected_models:
+                    st.subheader("Результаты предсказения")
+                    for name, model in models_dict.items():
+                        preds = model.predict(test_df)
+                        test_df[f"Prediction_{name.replace(' ', '_')}"] = preds
+                    st.write(test_df.head())
+                    st.success("Предсказование выполнено успешно!")
+                else:
+                    st.warning("Пожалуйста, выберите хотя бы одну модель.")
             except Exception as e:
                 st.error(f"Ошибка при обработке файла: {e}")
